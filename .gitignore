@@ -19,3 +19,9 @@ dist/
 # Environment
 .env
 .env.local
+
+# SDD artifacts
+.atl/
+
+# Requirements doc (managed externally)
+Requerimientos funcionales.md
