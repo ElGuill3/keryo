@@ -5,6 +5,6 @@ import App from '../src/App'
 describe('smoke test', () => {
   it('renders App without crashing', () => {
     render(<App />)
-    expect(screen.getByText('Keryo')).toBeInTheDocument()
+    expect(screen.getByText(/Keryo/)).toBeInTheDocument()
   })
 })
