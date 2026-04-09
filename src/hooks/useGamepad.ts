@@ -128,6 +128,14 @@ function createInitialState(): GamepadState {
 }
 
 /**
+ * Epsilon for float comparisons in state equality.
+ * Using exact equality (===) on floats can fail due to precision errors,
+ * causing missed state updates when joysticks move fast.
+ */
+const STICK_EPSILON = 0.01;
+const TRIGGER_EPSILON = 0.01;
+
+/**
  * Compares two gamepad states for equality.
  * Used for dirty-flag optimization.
  */
@@ -145,19 +153,25 @@ function statesAreEqual(a: GamepadState | null, b: GamepadState): boolean {
     if (a.buttons[key as KeryoButton] !== b.buttons[key as KeryoButton]) return false;
   }
 
-  // Check triggers
+  // Check triggers with epsilon tolerance for float precision
   if (
-    a.triggers.l2.value !== b.triggers.l2.value ||
+    Math.abs(a.triggers.l2.value - b.triggers.l2.value) > TRIGGER_EPSILON ||
     a.triggers.l2.pressed !== b.triggers.l2.pressed ||
-    a.triggers.r2.value !== b.triggers.r2.value ||
+    Math.abs(a.triggers.r2.value - b.triggers.r2.value) > TRIGGER_EPSILON ||
     a.triggers.r2.pressed !== b.triggers.r2.pressed
   ) {
     return false;
   }
 
-  // Check sticks
-  if (a.leftStick.x !== b.leftStick.x || a.leftStick.y !== b.leftStick.y) return false;
-  if (a.rightStick.x !== b.rightStick.x || a.rightStick.y !== b.rightStick.y) return false;
+  // Check sticks with epsilon tolerance — fixed typo: a.rightStick.y !== b.rightStick.y
+  if (
+    Math.abs(a.leftStick.x - b.leftStick.x) > STICK_EPSILON ||
+    Math.abs(a.leftStick.y - b.leftStick.y) > STICK_EPSILON ||
+    Math.abs(a.rightStick.x - b.rightStick.x) > STICK_EPSILON ||
+    Math.abs(a.rightStick.y - b.rightStick.y) > STICK_EPSILON
+  ) {
+    return false;
+  }
 
   return true;
 }

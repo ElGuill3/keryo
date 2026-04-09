@@ -67,7 +67,10 @@ describe('gamepad normalization', () => {
       expect(result.r2.pressed).toBe(false); // 0.25 <= 0.5
     });
 
-    it('falls back to axes when buttons have no value (Xbox style)', () => {
+    it('does NOT fall back to axes — axes are for sticks only (avoids crosstalk)', () => {
+      // NOTE: axes[2]/axes[3] are the RIGHT stick X/Y per Gamepad API standard.
+      // We do NOT use axes for triggers because it causes cross-talk where
+      // moving the right stick affects trigger values.
       const buttons = [
         { pressed: false, value: 0 } as GamepadButton,
         { pressed: false, value: 0 } as GamepadButton,
@@ -75,19 +78,20 @@ describe('gamepad normalization', () => {
         { pressed: false, value: 0 } as GamepadButton,
         { pressed: false, value: 0 } as GamepadButton,
         { pressed: false, value: 0 } as GamepadButton,
-        { pressed: false, value: 0 } as GamepadButton, // L2 button index — no analog value
-        { pressed: false, value: 0 } as GamepadButton, // R2 button index — no analog value
+        { pressed: false, value: 0 } as GamepadButton, // L2 button — no analog value
+        { pressed: false, value: 0 } as GamepadButton, // R2 button — no analog value
       ];
-      // Xbox triggers report as axes[2] and axes[3] (negative = pressed, remapped to 0-1)
-      // axes[6] and axes[7] are NOT the trigger axes, they're something else
-      const axes: readonly number[] = [0, 0, -0.85, -0.3]; // axes[2]=L2, axes[3]=R2
+      // Even if axes report negative values (as Xbox triggers do in some browsers),
+      // we ignore them because axes[2]/axes[3] are the RIGHT stick, not triggers.
+      const axes: readonly number[] = [0, 0, -0.85, -0.3];
 
       const result = normalizeTriggers(buttons, axes);
 
-      expect(result.l2.value).toBeCloseTo(0.85);
-      expect(result.l2.pressed).toBe(true); // 0.85 > 0.5
-      expect(result.r2.value).toBeCloseTo(0.3);
-      expect(result.r2.pressed).toBe(false); // 0.3 <= 0.5
+      // Triggers should be 0 since buttons have no value
+      expect(result.l2.value).toBe(0);
+      expect(result.l2.pressed).toBe(false);
+      expect(result.r2.value).toBe(0);
+      expect(result.r2.pressed).toBe(false);
     });
 
     it('returns 0 for unpressed triggers', () => {

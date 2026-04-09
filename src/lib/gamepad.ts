@@ -2,9 +2,10 @@ import { KeryoButton, AnalogTrigger } from './inputState';
 
 /**
  * Deadzone threshold for stick axes.
- * Values within ±0.05 are treated as neutral (0).
+ * Values within ±0.02 are treated as neutral (0).
+ * Reduced from 0.05 to minimize visual "jump" when stick exits deadzone.
  */
-const STICK_DEADZONE = 0.05;
+const STICK_DEADZONE = 0.02;
 
 /**
  * Threshold for trigger pressed state.
@@ -80,33 +81,31 @@ const RIGHT_STICK_X_AXIS = 2;
 const RIGHT_STICK_Y_AXIS = 3;
 
 /**
- * Dual-mode trigger normalization.
+ * Trigger normalization using standard Gamepad API button indices.
  *
- * Some gamepads (PlayStation) report triggers as buttons with analog value:
- *   - buttons[6].value = L2 (0 to 1)
- *   - buttons[7].value = R2 (0 to 1)
+ * Per the Gamepad API standard:
+ *   - buttons[6] = L2 (analog 0 to 1 on PlayStation, 0 to 1 on Xbox)
+ *   - buttons[7] = R2 (analog 0 to 1 on PlayStation, 0 to 1 on Xbox)
  *
- * Other gamepads (Xbox in some browsers) report triggers as axes:
- *   - axes[2] = LT (-1 to 1, where -1 = released, 1 = fully pressed)
- *   - axes[3] = RT (-1 to 1)
- *
- * This function checks both sources and uses whichever provides analog data.
+ * We do NOT use axes[2]/axes[3] for triggers because those are the RIGHT stick X/Y
+ * axes per the standard. Using axes for triggers causes cross-talk where moving
+ * the right stick affects trigger values.
  */
 export function normalizeTriggers(
   buttons: readonly GamepadButton[],
-  axes: readonly number[]
+  _axes: readonly number[]
 ): { l2: AnalogTrigger; r2: AnalogTrigger } {
-  // L2 trigger — axes[2] is Xbox LT, buttons[6] is PlayStation L2
-  const l2Raw = extractAnalogTrigger(buttons[6], axes[2]);
-  const l2Value = Math.max(0, Math.min(1, l2Raw)); // clamp to 0-1
+  // L2 trigger — buttons[6] per Gamepad API standard
+  const l2Raw = buttons[6]?.value ?? 0;
+  const l2Value = Math.max(0, Math.min(1, l2Raw));
   const l2: AnalogTrigger = {
     button: KeryoButton.L2,
     value: l2Value,
     pressed: l2Value > TRIGGER_THRESHOLD,
   };
 
-  // R2 trigger — axes[3] is Xbox RT, buttons[7] is PlayStation R2
-  const r2Raw = extractAnalogTrigger(buttons[7], axes[3]);
+  // R2 trigger — buttons[7] per Gamepad API standard
+  const r2Raw = buttons[7]?.value ?? 0;
   const r2Value = Math.max(0, Math.min(1, r2Raw));
   const r2: AnalogTrigger = {
     button: KeryoButton.R2,
@@ -118,29 +117,13 @@ export function normalizeTriggers(
 }
 
 /**
- * Extracts analog value from either a GamepadButton or an axis.
- * Button takes precedence if it has an analog value.
- */
-function extractAnalogTrigger(
-  button: GamepadButton | undefined,
-  axis: number | undefined
-): number {
-  // Try button first (PlayStation style)
-  if (button && button.value !== undefined && button.value !== 0) {
-    return button.value;
-  }
-
-  // Fall back to axis (Xbox style) — axis is negative when pressed
-  // Remap from (-1 to 1) to (0 to 1)
-  if (axis !== undefined && axis < 0) {
-    return Math.abs(axis);
-  }
-
-  return 0;
-}
-
-/**
- * Normalizes stick axes with deadzone applied.
+ * Normalizes stick axes with deadzone and circular constraint applied.
+ *
+ * Deadzone: values within ±0.05 are treated as neutral (0).
+ * Circular constraint: if the magnitude exceeds 1 (e.g., diagonal movement
+ * where x² + y² > 1), the vector is normalized to the unit circle.
+ * This prevents "square" movement where the stick appears to go to corners
+ * before reaching the visual boundary.
  */
 export function normalizeStick(
   xAxis: number | undefined,
@@ -150,8 +133,16 @@ export function normalizeStick(
   const rawY = yAxis ?? 0;
 
   // Apply deadzone
-  const x = Math.abs(rawX) < STICK_DEADZONE ? 0 : rawX;
-  const y = Math.abs(rawY) < STICK_DEADZONE ? 0 : rawY;
+  let x = Math.abs(rawX) < STICK_DEADZONE ? 0 : rawX;
+  let y = Math.abs(rawY) < STICK_DEADZONE ? 0 : rawY;
+
+  // Apply circular normalization — project to unit circle if magnitude > 1
+  // This prevents diagonal movement from exceeding the stick's physical range
+  const magnitude = Math.sqrt(x * x + y * y);
+  if (magnitude > 1) {
+    x = x / magnitude;
+    y = y / magnitude;
+  }
 
   return { x, y };
 }
