@@ -1,14 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useInput } from '../hooks/useInput';
 
-const STICK_PIXEL_FACTOR = 50;
+const STICK_PIXEL_FACTOR = 36; // Must equal (STICK_CONTAINER_SIZE - STICK_DOT_SIZE) / 2 for 1:1 mapping
 const STICK_CONTAINER_SIZE = 96; // px
 const STICK_DOT_SIZE = 24; // px
 const STICK_CENTER_OFFSET = (STICK_CONTAINER_SIZE - STICK_DOT_SIZE) / 2; // 36px
+const STICK_SMOOTH_FACTOR = 0.3; // Interpolation factor (0 = instant, 1 = never updates)
+
+interface StickPosition {
+  x: number;
+  y: number;
+}
 
 export default function DebugPage() {
   const { inputState } = useInput();
   const [keyHistory, setKeyHistory] = useState<string[]>([]);
+
+  // Smoothed stick values for visual interpolation (does not affect actual input)
+  const smoothLeftStick = useRef<StickPosition>({ x: 0, y: 0 });
+  const smoothRightStick = useRef<StickPosition>({ x: 0, y: 0 });
+
+  const { gamepad } = inputState;
+
+  // Interpolate stick positions for smooth visual feedback
+  useEffect(() => {
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+    smoothLeftStick.current = {
+      x: lerp(smoothLeftStick.current.x, gamepad.leftStick.x, STICK_SMOOTH_FACTOR),
+      y: lerp(smoothLeftStick.current.y, gamepad.leftStick.y, STICK_SMOOTH_FACTOR),
+    };
+    smoothRightStick.current = {
+      x: lerp(smoothRightStick.current.x, gamepad.rightStick.x, STICK_SMOOTH_FACTOR),
+      y: lerp(smoothRightStick.current.y, gamepad.rightStick.y, STICK_SMOOTH_FACTOR),
+    };
+  }, [gamepad.leftStick.x, gamepad.leftStick.y, gamepad.rightStick.x, gamepad.rightStick.y]);
 
   // Track keyboard history
   useEffect(() => {
@@ -23,8 +49,6 @@ export default function DebugPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const { gamepad } = inputState;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -82,10 +106,10 @@ export default function DebugPage() {
                 <span className="text-sm mb-2">Left</span>
                 <div className="relative w-24 h-24 bg-gray-700 rounded-full border-2 border-gray-600">
                   <div
-                    className="absolute w-6 h-6 bg-blue-500 rounded-full transition-all duration-75"
+                    className="absolute w-6 h-6 bg-blue-500 rounded-full"
                     style={{
-                      left: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.leftStick.x * STICK_PIXEL_FACTOR}px)`,
-                      top: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.leftStick.y * STICK_PIXEL_FACTOR}px)`,
+                      left: `calc(${STICK_CENTER_OFFSET}px + ${smoothLeftStick.current.x * STICK_PIXEL_FACTOR}px)`,
+                      top: `calc(${STICK_CENTER_OFFSET}px + ${smoothLeftStick.current.y * STICK_PIXEL_FACTOR}px)`,
                     }}
                   />
                 </div>
@@ -99,10 +123,10 @@ export default function DebugPage() {
                 <span className="text-sm mb-2">Right</span>
                 <div className="relative w-24 h-24 bg-gray-700 rounded-full border-2 border-gray-600">
                   <div
-                    className="absolute w-6 h-6 bg-blue-500 rounded-full transition-all duration-75"
+                    className="absolute w-6 h-6 bg-blue-500 rounded-full"
                     style={{
-                      left: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.rightStick.x * STICK_PIXEL_FACTOR}px)`,
-                      top: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.rightStick.y * STICK_PIXEL_FACTOR}px)`,
+                      left: `calc(${STICK_CENTER_OFFSET}px + ${smoothRightStick.current.x * STICK_PIXEL_FACTOR}px)`,
+                      top: `calc(${STICK_CENTER_OFFSET}px + ${smoothRightStick.current.y * STICK_PIXEL_FACTOR}px)`,
                     }}
                   />
                 </div>
