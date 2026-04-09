@@ -82,30 +82,37 @@ const RIGHT_STICK_Y_AXIS = 3;
 /**
  * Dual-mode trigger normalization.
  *
- * Some gamepads (PlayStation) report triggers as buttons with analog value:
+ * PlayStation controllers report triggers as buttons with analog value:
  *   - buttons[6].value = L2 (0 to 1)
  *   - buttons[7].value = R2 (0 to 1)
  *
- * Other gamepads (Xbox in some browsers) report triggers as axes:
- *   - axes[2] = LT (-1 to 1, where -1 = released, 1 = fully pressed)
- *   - axes[3] = RT (-1 to 1)
+ * Xbox controllers in some browsers report triggers as axes:
+ *   - axes[2] = LT (-1 to 1, remapped to 0 to 1)
+ *   - axes[3] = RT (-1 to 1, remapped to 0 to 1)
  *
- * This function checks both sources and uses whichever provides analog data.
+ * We check buttons first (PlayStation style), then fall back to axes (Xbox style).
+ * NOTE: axes[2]/axes[3] are also the RIGHT stick X/Y on most gamepads,
+ * so using axes as trigger fallback can cause stick movement to affect trigger values.
+ * This dual-mode detection is kept for Xbox compatibility but may cause cross-talk.
  */
 export function normalizeTriggers(
   buttons: readonly GamepadButton[],
   axes: readonly number[]
 ): { l2: AnalogTrigger; r2: AnalogTrigger } {
-  // L2 trigger — axes[2] is Xbox LT, buttons[6] is PlayStation L2
+  // L2 trigger
+  // buttons[6] = L2 on PlayStation (analog 0-1)
+  // axes[2] = LT on Xbox (analog -1 to 1, negative = pressed)
   const l2Raw = extractAnalogTrigger(buttons[6], axes[2]);
-  const l2Value = Math.max(0, Math.min(1, l2Raw)); // clamp to 0-1
+  const l2Value = Math.max(0, Math.min(1, l2Raw));
   const l2: AnalogTrigger = {
     button: KeryoButton.L2,
     value: l2Value,
     pressed: l2Value > TRIGGER_THRESHOLD,
   };
 
-  // R2 trigger — axes[3] is Xbox RT, buttons[7] is PlayStation R2
+  // R2 trigger
+  // buttons[7] = R2 on PlayStation (analog 0-1)
+  // axes[3] = RT on Xbox (analog -1 to 1, negative = pressed)
   const r2Raw = extractAnalogTrigger(buttons[7], axes[3]);
   const r2Value = Math.max(0, Math.min(1, r2Raw));
   const r2: AnalogTrigger = {

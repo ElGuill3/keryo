@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useInput } from '../hooks/useInput';
 
 const STICK_PIXEL_FACTOR = 50;
+const STICK_CONTAINER_SIZE = 96; // px
+const STICK_DOT_SIZE = 24; // px
+const STICK_CENTER_OFFSET = (STICK_CONTAINER_SIZE - STICK_DOT_SIZE) / 2; // 36px
 
 export default function DebugPage() {
   const { inputState } = useInput();
@@ -79,9 +82,10 @@ export default function DebugPage() {
                 <span className="text-sm mb-2">Left</span>
                 <div className="relative w-24 h-24 bg-gray-700 rounded-full border-2 border-gray-600">
                   <div
-                    className="absolute w-6 h-6 bg-blue-500 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-75"
+                    className="absolute w-6 h-6 bg-blue-500 rounded-full transition-all duration-75"
                     style={{
-                      transform: `translate(calc(-50% + ${gamepad.leftStick.x * STICK_PIXEL_FACTOR}px), calc(-50% + ${gamepad.leftStick.y * STICK_PIXEL_FACTOR}px))`,
+                      left: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.leftStick.x * STICK_PIXEL_FACTOR}px)`,
+                      top: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.leftStick.y * STICK_PIXEL_FACTOR}px)`,
                     }}
                   />
                 </div>
@@ -95,9 +99,10 @@ export default function DebugPage() {
                 <span className="text-sm mb-2">Right</span>
                 <div className="relative w-24 h-24 bg-gray-700 rounded-full border-2 border-gray-600">
                   <div
-                    className="absolute w-6 h-6 bg-blue-500 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-75"
+                    className="absolute w-6 h-6 bg-blue-500 rounded-full transition-all duration-75"
                     style={{
-                      transform: `translate(calc(-50% + ${gamepad.rightStick.x * STICK_PIXEL_FACTOR}px), calc(-50% + ${gamepad.rightStick.y * STICK_PIXEL_FACTOR}px))`,
+                      left: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.rightStick.x * STICK_PIXEL_FACTOR}px)`,
+                      top: `calc(${STICK_CENTER_OFFSET}px + ${gamepad.rightStick.y * STICK_PIXEL_FACTOR}px)`,
                     }}
                   />
                 </div>
