@@ -9,6 +9,12 @@ node_modules/
 # Build output
 dist/
 
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Test coverage
+coverage/
+
 # IDE
 .vscode/
 .idea/
