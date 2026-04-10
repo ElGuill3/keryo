@@ -14,8 +14,9 @@ export interface TriggerSkinProps {
 /**
  * TriggerSkin - Animated analog trigger visualizer.
  * Uses Framer Motion useSpring for smooth physics-based animation.
- * 
- * Spring config: stiffness 100, damping 25 for heavier, more realistic trigger feel.
+ *
+ * Spring config: stiffness 400, damping 40 for responsive trigger feel
+ * without bounce.
  */
 export function TriggerSkin({
   trigger,
