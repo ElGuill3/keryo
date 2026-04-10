@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StickSkin } from '../../src/components/GamepadSkin/StickSkin';
 import { TriggerSkin } from '../../src/components/GamepadSkin/TriggerSkin';
@@ -7,14 +7,28 @@ import { GamepadSkin } from '../../src/components/GamepadSkin/GamepadSkin';
 import { KeryoInputState, KeryoButton } from '../../src/lib/inputState';
 import React from 'react';
 
-// Mock framer-motion
+// Track spring calls for verification
+const springCalls: { source: string; config: { stiffness: number; damping: number } }[] = [];
+
+beforeEach(() => {
+  springCalls.length = 0;
+});
+
+// Mock framer-motion with spring call tracking
 vi.mock('framer-motion', () => {
+  // @ts-ignore - require not recognized by TS but needed for vitest mock hoisting
   const React = require('react');
   return {
-    useSpring: (value: any) => ({
-      get: () => (typeof value === 'number' ? value : 0),
-      set: () => {},
-    }),
+    useSpring: (value: any, config: { stiffness: number; damping: number }) => {
+      springCalls.push({
+        source: 'useSpring',
+        config: config || { stiffness: 0, damping: 0 },
+      });
+      return {
+        get: () => (typeof value === 'number' ? value : 0),
+        set: () => {},
+      };
+    },
     useMotionValue: (initial: number) => ({
       get: () => initial,
       set: () => {},
@@ -171,5 +185,70 @@ describe('GamepadSkin', () => {
       </GamepadSkin>
     );
     expect(screen.getByText('A')).toBeTruthy();
+  });
+});
+
+describe('Spring Physics Configuration', () => {
+  it('StickSkin uses spring config with stiffness 500 and damping 45', () => {
+    const inputState = createMockInputState();
+    render(
+      <GamepadSkin inputState={inputState}>
+        <StickSkin stick="leftStick" />
+      </GamepadSkin>
+    );
+
+    // Find spring calls for StickSkin (x and y axes = 2 calls)
+    const stickSprings = springCalls.filter((call) => {
+      // Both x and y springs should have the same config
+      return call.config.stiffness === 500 && call.config.damping === 45;
+    });
+
+    expect(stickSprings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('TriggerSkin uses spring config with stiffness 400 and damping 40', () => {
+    const inputState = createMockInputState();
+    render(
+      <GamepadSkin inputState={inputState}>
+        <TriggerSkin trigger="l2" />
+      </GamepadSkin>
+    );
+
+    // Find spring calls for TriggerSkin
+    const triggerSprings = springCalls.filter(
+      (call) => call.config.stiffness === 400 && call.config.damping === 40
+    );
+
+    expect(triggerSprings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Right stick also uses spring config with stiffness 500 and damping 45', () => {
+    const inputState = createMockInputState();
+    render(
+      <GamepadSkin inputState={inputState}>
+        <StickSkin stick="rightStick" />
+      </GamepadSkin>
+    );
+
+    const stickSprings = springCalls.filter(
+      (call) => call.config.stiffness === 500 && call.config.damping === 45
+    );
+
+    expect(stickSprings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('R2 trigger also uses spring config with stiffness 400 and damping 40', () => {
+    const inputState = createMockInputState();
+    render(
+      <GamepadSkin inputState={inputState}>
+        <TriggerSkin trigger="r2" />
+      </GamepadSkin>
+    );
+
+    const triggerSprings = springCalls.filter(
+      (call) => call.config.stiffness === 400 && call.config.damping === 40
+    );
+
+    expect(triggerSprings.length).toBeGreaterThanOrEqual(1);
   });
 });
