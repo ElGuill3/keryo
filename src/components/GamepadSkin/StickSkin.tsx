@@ -14,8 +14,9 @@ export interface StickSkinProps {
 /**
  * StickSkin - Animated joystick visualizer.
  * Uses Framer Motion useSpring for smooth physics-based animation.
- * 
- * Spring config: stiffness 200, damping 20 for responsive but smooth feel.
+ *
+ * Spring config: stiffness 500, damping 45 for critically damped response
+ * without oscillation or bounce.
  */
 export function StickSkin({
   stick,
